@@ -1,0 +1,18 @@
+{
+  "name": "03_fullbackend",
+  "version": "1.0.0",
+  "description": "This is first fully production ready js backend",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon "
+  },
+  "keywords": [
+    "Javasript"
+  ],
+  "author": "Rajiv Sharma",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
