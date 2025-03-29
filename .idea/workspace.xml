@@ -4,13 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="86e81582-39ec-45e6-8bf9-ecea550f9bef" name="Changes" comment="All Setup Config">
+    <list default="true" id="86e81582-39ec-45e6-8bf9-ecea550f9bef" name="Changes" comment="Bug Fixed">
+      <change afterPath="$PROJECT_DIR$/src/middlewares/auth.middleware.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/subscription.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controllers/user.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/user.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/models/user.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/models/user.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/routes/user.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/user.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/APiResponse.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/APiResponse.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/ApiError.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/ApiError.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,7 +92,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1743160006069</updated>
-      <workItem from="1743160007322" duration="6567000" />
+      <workItem from="1743160007322" duration="25757000" />
     </task>
     <task id="LOCAL-00002" summary="All Setup Config">
       <option name="closed" value="true" />
@@ -102,7 +102,23 @@
       <option name="project" value="LOCAL" />
       <updated>1743162267500</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Added register controller">
+      <option name="closed" value="true" />
+      <created>1743166832403</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1743166832403</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Bug Fixed">
+      <option name="closed" value="true" />
+      <created>1743170801255</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1743170801255</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -128,6 +144,8 @@
     <MESSAGE value="Added Prettier conf" />
     <MESSAGE value="Added Model" />
     <MESSAGE value="All Setup Config" />
-    <option name="LAST_COMMIT_MESSAGE" value="All Setup Config" />
+    <MESSAGE value="Added register controller" />
+    <MESSAGE value="Bug Fixed" />
+    <option name="LAST_COMMIT_MESSAGE" value="Bug Fixed" />
   </component>
 </project>

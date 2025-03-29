@@ -60,32 +60,43 @@ userSchema.methods.isPasswordValid = async function(password) {
 }
 
 userSchema.methods.generateAccessToken = function() {
-    return jwt.sign(
+    try{
+      return jwt.sign(
         {
-            _id:this._id,
-            username:this.username,
-            email:this.email,
-            fullName:this.fullName,
+          _id:this._id,
+          username:this.username,
+          email:this.email,
+          fullName:this.fullName,
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: process.env.ACCESS_TOKEN_SECRET
+          expiresIn: process.env.ACCESS_TOKEN_EXPIRY
         }
-    )
+      )
+    }
+    catch (error) {
+      console.error('user.model.js :: generateAccessToken :: Error :',error);
+    }
+
 }
 userSchema.methods.generateRefreshToken = function() {
+  try{
     return jwt.sign(
-        {
-            _id:this._id,
-            username:this.username,
-            email:this.email,
-            fullName:this.fullName,
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
-        }
+      {
+        _id:this._id,
+        username:this.username,
+        email:this.email,
+        fullName:this.fullName,
+      },
+      process.env.REFRESH_TOKEN_SECRET,
+      {
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+      }
     )
+  }
+  catch (error) {
+    console.error('user.model.js :: generateRefreshToken :: Error :',error);
+  }
 }
 
 export const User = mongoose.model('User', userSchema);
