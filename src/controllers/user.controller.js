@@ -5,6 +5,7 @@ import uploadOnCloudinary from "../utils/Cloudinary.js";
 import ApiResponse from "../utils/APiResponse.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -343,6 +344,48 @@ const getUserChannelProfile = asyncHandler( async(req,res) =>{
 
 })
 
+const getUserWatchHistory = asyncHandler( async(req,res) =>{
+
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Schema.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from:"videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from:"users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                        }
+
+                    },
+                    {
+                        $addFields:{
+                            owner:"$owner"
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Successfully fetched user watched history",user[0].watchHistory)
+      )
+
+
+})
+
 export {
     registerUser,
     loginUser,
@@ -353,5 +396,6 @@ export {
     getCurrentUser,
     changeUserAvatar,
     changeUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getUserWatchHistory
 };

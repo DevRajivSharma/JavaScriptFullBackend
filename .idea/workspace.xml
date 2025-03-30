@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="86e81582-39ec-45e6-8bf9-ecea550f9bef" name="Changes" comment="Token config added and subscription model added">
+    <list default="true" id="86e81582-39ec-45e6-8bf9-ecea550f9bef" name="Changes" comment="Added chaneel aggrgation pipeline">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/controllers/user.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/controllers/user.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/routes/user.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/user.routes.js" afterDir="false" />
@@ -89,7 +89,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1743160006069</updated>
-      <workItem from="1743160007322" duration="32502000" />
+      <workItem from="1743160007322" duration="35895000" />
     </task>
     <task id="LOCAL-00002" summary="All Setup Config">
       <option name="closed" value="true" />
@@ -123,7 +123,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743243743807</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Added chaneel aggrgation pipeline">
+      <option name="closed" value="true" />
+      <created>1743314324257</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1743314324257</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -152,6 +160,7 @@
     <MESSAGE value="Added register controller" />
     <MESSAGE value="Bug Fixed" />
     <MESSAGE value="Token config added and subscription model added" />
-    <option name="LAST_COMMIT_MESSAGE" value="Token config added and subscription model added" />
+    <MESSAGE value="Added chaneel aggrgation pipeline" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added chaneel aggrgation pipeline" />
   </component>
 </project>

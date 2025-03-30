@@ -10,9 +10,10 @@ import {
   changeUserAvatar,
   changeUserCoverImage,
   getUserChannelProfile,
+  getUserWatchHistory,
 }
 
-from "../controllers/user.controller.js";
+  from "../controllers/user.controller.js";
 import  upload from "../middlewares/multer.middleware.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 const router = Router();
@@ -53,29 +54,24 @@ router.route("/getCurrentUser").post(
 )
 router.route("/change-avatar").post(
   verifyJwt,
-  upload.field(
-    {
-      name:"avatar",
-      maxCount:1
-    }
-  ),
+  upload.single("avatar"),
   changeUserAvatar
 )
 
 router.route("/change-avatar").post(
   verifyJwt,
-  upload.field(
-    {
-      name:"coverImage",
-      maxCount:1
-    }
-  ),
+  upload.single("coverImage"),
   changeUserCoverImage
 )
 
 router.route("/getChannelData:username").get(
   verifyJwt,
   getUserChannelProfile
+)
+
+router.route("/getUserWatchHistory").get(
+  verifyJwt,
+  getUserWatchHistory
 )
 
 export default router;
