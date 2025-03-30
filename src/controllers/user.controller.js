@@ -188,4 +188,170 @@ const refreshAccessToken = asyncHandler( async(req,res) =>{
 
 })
 
-export {registerUser, loginUser,logoutUser,refreshAccessToken};
+const changePassword = asyncHandler( async(req,res) =>{
+    const {oldPassword, newPassword} = req.body;
+    const user = await User.findById(req.user._id)
+
+    const isValid = await user.isPasswordValid(oldPassword);
+    user.password = newPassword;
+    await user.save({
+        validateBeforeSave:false
+    })
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Successfully changed password",{})
+      )
+})
+
+const getCurrentUser = asyncHandler( async(req,res) =>{
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Current user fetcher successfully",res.user)
+      )
+})
+
+const changeUserName = asyncHandler( async(req,res) =>{
+    const {username} = req.body;
+    const user = await User.findOne(username).select("-password -refreshToken");
+    return res.status(200)
+    .json(
+      new ApiResponse(200,"Successfully changed user name",user)
+    )
+})
+
+const changeUserAvatar = asyncHandler( async(req,res) =>{
+    const {userAvatar} = req.file?.path;
+    if (!userAvatar){
+        throw new ApiError(403, "Invalid user avatar");
+    }
+    const avatar = await uploadOnCloudinary(userAvatar)
+
+    if(!avatar){
+        throw new ApiError(403, "Can't find user avatar");
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+          $set:{
+              avatar:avatar.url
+          }
+      },
+      { new: true },
+    ).select("-password -refreshToken");
+
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Successfully changed user avatar",user)
+      )
+
+})
+
+const changeUserCoverImage = asyncHandler( async(req,res) =>{
+    const {userImageCover} = req.file?.path;
+    if (!userImageCover){
+        throw new ApiError(403, "Invalid user avatar");
+    }
+    const coverImage = await uploadOnCloudinary(userImageCover)
+
+    if(!coverImage){
+        throw new ApiError(403, "Can't find user coverImage");
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+          $set:{
+              coverImage:coverImage.url
+          }
+      },
+      { new: true },
+    ).select("-password -refreshToken");
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Successfully changed user coverImage",user)
+      )
+})
+
+const getUserChannelProfile = asyncHandler( async(req,res) =>{
+    const {username} = req.params;
+    if (!username){
+        throw new ApiError(403, "Invalid user username");
+    }
+    const channelData = await User.aggregate([
+      {
+          $match: {
+              username: username
+          }
+      },
+      {
+          $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "subscriber",
+              as: "subscribedTO",
+          }
+      },
+      {
+          $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscriber",
+          }
+      },
+      {
+          $addFields:{
+                totalSubscribers: {
+                    $size:"$subscriber"
+                },
+                totalSubscribedTo: {
+                    $size:"subscribedTO"
+                },
+                isSubscribed: {
+                    $cond:{
+                        if:{
+                            $in:[req.user._id,"$subscriber"]
+                        },
+                        then:true,
+                        else:false
+                    }
+                }
+          }
+      },
+      {
+          $project: {
+              username:1,
+              fullName:1,
+              email:1,
+              avatar:1,
+              coverImage:1,
+              isSubscribed:1,
+              totalSubscribers:1,
+              totalSubscribedTo:1
+          }
+      }
+    ])
+
+    if(!channelData?.length){
+        throw new ApiError(403, "Can't find user channel");
+    }
+
+    return res.status(200)
+      .json(
+        new ApiResponse(200,"Successfully get channel data",channelData)
+      )
+
+
+})
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changePassword,
+    changeUserName,
+    getCurrentUser,
+    changeUserAvatar,
+    changeUserCoverImage,
+    getUserChannelProfile
+};
