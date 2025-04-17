@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import apiError from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
 const verifyJwt = asyncHandler(async (req,res,next) =>{
 
@@ -9,7 +10,7 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
     const token = req.cookies?.accessToken
       || req.header("Authorization")?.replace("Bearer ", "");
 
-    // console.log('token found',token);
+    console.log('token found',token);
 
     if (!token) {
       throw new apiError(400, "Unauthorized access");
@@ -21,12 +22,20 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
       throw new apiError(401, "Unauthorized access token");
     }
 
-    const user = User.findById(decoded._id);
+    console.log("These is decoded acess token",decoded);
+    
+    // const user_id =  new mongoose.Schema.Types.ObjectId(decoded._id);
+    console.log("These is user_id",decoded._id);
 
+    const user = await User.findById(decoded._id).select("-password -refreshToken");
+
+    console.log("These is user",user.username);
+  
     req.user = user;
     next();
   }
   catch (error){
+    console.log(error);
     throw new apiError(401, "Something went wrong");
   }
 })

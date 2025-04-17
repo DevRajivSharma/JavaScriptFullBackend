@@ -11,4 +11,7 @@ class ApiResponse {
     }
 }
 
+// const test = new ApiResponse(200,"Successfully created user",{id:"12345",username:"John Doe"})
+// console.log(typeof test);
+
 export default ApiResponse;

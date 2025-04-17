@@ -11,6 +11,8 @@ import {
   changeUserCoverImage,
   getUserChannelProfile,
   getUserWatchHistory,
+  sendEmailVerificationOTP,
+  verifyEmail
 }
 
   from "../controllers/user.controller.js";
@@ -39,6 +41,16 @@ router.route("/logout").post(
   logoutUser
 )
 
+router.route("/send-otp").post(
+  verifyJwt,
+  sendEmailVerificationOTP
+)
+
+router.route("/verify-email").post(
+  verifyJwt,
+  verifyEmail
+)
+
 router.route("/refresh-token").get(refreshAccessToken)
 router.route("/change-password").post(
   verifyJwt,
@@ -48,7 +60,7 @@ router.route("/change-username").post(
   verifyJwt,
   changeUserName
 )
-router.route("/getCurrentUser").post(
+router.route("/getCurrentUser").get(
   verifyJwt,
   getCurrentUser
 )
@@ -73,5 +85,7 @@ router.route("/getUserWatchHistory").get(
   verifyJwt,
   getUserWatchHistory
 )
+
+router.route
 
 export default router;
