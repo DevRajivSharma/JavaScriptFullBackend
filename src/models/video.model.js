@@ -34,6 +34,7 @@ const videoSchema = new Schema(
             required:[true,"Views is required"],
             default:0
         },
+
         isPublished:{
             type: Boolean,
             default: true
