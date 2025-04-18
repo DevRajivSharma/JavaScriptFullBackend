@@ -106,12 +106,12 @@ const isSubscribed = asyncHandler(async (req, res) => {
 
   if (existingSubscription) {
     return res.status(200).json(
-      new ApiResponse(200,"Subscribed",true)
+      new ApiResponse(200,"Subscribed",{isSubscribed:true})
     )
   }
 
   return res.status(200).json(
-    new ApiResponse(200,"Not Subscribed",false)  
+    new ApiResponse(200,"Not Subscribed",{isSubscribed:false})  
   )
 })
 
