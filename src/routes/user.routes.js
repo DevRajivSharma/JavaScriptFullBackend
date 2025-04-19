@@ -9,7 +9,6 @@ import {
   getCurrentUser,
   changeUserAvatar,
   changeUserCoverImage,
-  getUserChannelProfile,
   getUserWatchHistory,
   sendEmailVerificationOTP,
   verifyEmail
@@ -52,6 +51,7 @@ router.route("/verify-email").post(
 )
 
 router.route("/refresh-token").get(refreshAccessToken)
+
 router.route("/change-password").post(
   verifyJwt,
   changePassword
@@ -76,10 +76,7 @@ router.route("/change-avatar").post(
   changeUserCoverImage
 )
 
-router.route("/getChannelData:username").get(
-  verifyJwt,
-  getUserChannelProfile
-)
+
 
 router.route("/getUserWatchHistory").get(
   verifyJwt,

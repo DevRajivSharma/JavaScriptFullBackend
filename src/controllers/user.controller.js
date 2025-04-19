@@ -305,77 +305,7 @@ const changeUserCoverImage = asyncHandler( async(req,res) =>{
       )
 })
 
-const getUserChannelProfile = asyncHandler( async(req,res) =>{
-    const {username} = req.params;
-    if (!username){
-        throw new ApiError(403, "Invalid user username");
-    }
-    const channelData = await User.aggregate([
-      {
-          $match: {
-              userName: username
-          }
-      },
-      {
-          $lookup: {
-              from: "subscriptions",
-              localField: "_id",
-              foreignField: "subscriber",
-              as: "subscribedTO",
-          }
-      },
-      {
-          $lookup: {
-              from: "subscriptions",
-              localField: "_id",
-              foreignField: "channel",
-              as: "subscriber",
-          }
-      },
-      {
-          $addFields:{
-                totalSubscribers: {
-                    $size:"$subscriber"
-                },
-                totalSubscribedTo: {
-                    $size:"subscribedTO"
-                },
-                isSubscribed: {
-                    $cond:{
-                        if:{
-                            $in:[req.user._id,"$subscriber"]
-                        },
-                        then:true,
-                        else:false
-                    }
-                }
-          }
-      },
-      {
-          $project: {
-              userName:1,
-              fullName:1,
-              email:1,
-              avatar:1,
-              coverImage:1,
-              isSubscribed:1,
-              totalSubscribers:1,
-              totalSubscribedTo:1
-          }
-      }
-    ])
 
-    if(!channelData?.length){
-        throw new ApiError(403, "Can't find user channel");
-    }
-
-    return res.status(200)
-      .json(
-        new ApiResponse(200,"Successfully get channel data",channelData)
-      )
-
-
-})
 
 const getUserWatchHistory = asyncHandler( async(req,res) =>{
 
@@ -418,7 +348,6 @@ const getUserWatchHistory = asyncHandler( async(req,res) =>{
 
 
 })
-
 
 const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
     

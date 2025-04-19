@@ -151,6 +151,8 @@ const updateThumbnail = asyncHandler(async (req, res) => {
 
 const getVideo = asyncHandler(async (req, res) => {
     const {videoId} = req.params;
+    const userId = req.user._id;
+
     if (!videoId) {
        throw new ApiError(400, "VideoId is required") 
     }
@@ -159,6 +161,9 @@ const getVideo = asyncHandler(async (req, res) => {
     if (!video) {
         throw new ApiError(400, "Video not found")
     }
+    await User.findByIdAndUpdate(userId, {
+        $addToSet: {watchedHistory: videoId},
+    })
     res.status(200).json(
         new ApiResponse(200,"Video fetched successfully",video) 
     )
