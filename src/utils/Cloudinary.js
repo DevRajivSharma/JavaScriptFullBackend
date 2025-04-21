@@ -29,5 +29,28 @@ const uploadOnCloudinary = async (filePath) => {
     }
 }
 
+const uploadLargeVideo = async (filePath) => {
+    try {
+        if (!fs.existsSync(filePath)) return 'File not found';
+        const uploadResult = await new Promise((resolve,reject) => { 
+            cloudinary.uploader.upload_large(
+            filePath,
+            {
+                resource_type: 'video',
+            },
+            (error,result) => {
+                if (error) reject(error);
+                resolve(result);  
+            }
+        )})
+        fs.unlinkSync(filePath);
+        return uploadResult;
+    } 
+    catch (error) {
+        console.log(error);
+        return null;
+    }
+}
+export {uploadLargeVideo};
 export default uploadOnCloudinary;
 

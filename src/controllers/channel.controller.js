@@ -32,10 +32,47 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     if (!channelId) {
         throw new ApiError(400, "channelId is required");
     } 
-    const videos = await Video.find({owner: channelId});
+    const videos = await Video.aggregate([
+       {
+            $match: {
+                $and:
+                    [
+                     {owner: new mongoose.Types.ObjectId(channelId)},
+                     {isPublished: true}
+                    ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            userName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $sort:{
+                createdAt: -1
+            }
+        }
+    ])
 
     if (!videos?.length) {
-        throw new ApiError(404, "No videos found");
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                "No videos found",
+                []
+            )
+        );
     }
 
     return res.status(200).json(
@@ -57,7 +94,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const channelData = await User.aggregate([
         {
             $match: {
-                userName: new mongoose.Schema.Types.ObjectId(channelId)
+                _id: new mongoose.Types.ObjectId(channelId)
             }
         },
         // Subscription data
@@ -86,8 +123,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 as: "videos",
                 pipeline: [
                     {
+                        $match: {
+                            isPublished: true
+                        }
+                    },
+                    {
                         $project: {
                             title: 1,
+                            videoFile: 1,
                             description: 1,
                             thumbnail: 1,
                             views: 1,
@@ -111,7 +154,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                             name: 1,
                             description: 1,
                             thumbnail: 1,
-                            videos: 1,
                             createdAt: 1
                         }
                     }

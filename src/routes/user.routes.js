@@ -50,33 +50,34 @@ router.route("/verify-email").post(
   verifyEmail
 )
 
-router.route("/refresh-token").get(refreshAccessToken)
+router.route("/refreshAccessToken").get(refreshAccessToken)
 
-router.route("/change-password").post(
+router.route("/changePassword").post(
   verifyJwt,
   changePassword
 )
-router.route("/change-username").post(
+
+router.route("/changeUserName").post(
   verifyJwt,
   changeUserName
 )
+
 router.route("/getCurrentUser").get(
   verifyJwt,
   getCurrentUser
 )
-router.route("/change-avatar").post(
+
+router.route("/changeUserAvatar").post(
   verifyJwt,
   upload.single("avatar"),
   changeUserAvatar
 )
 
-router.route("/change-avatar").post(
+router.route("/changeUserCoverImage").post(
   verifyJwt,
   upload.single("coverImage"),
   changeUserCoverImage
 )
-
-
 
 router.route("/getUserWatchHistory").get(
   verifyJwt,

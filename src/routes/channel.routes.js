@@ -8,17 +8,17 @@ import {
 
 const router = Router();
 
-router.route('/getChannelAllPlaylists:channelId').get(
+router.route('/getChannelAllPlaylists/:channelId').get(
     verifyJwt,
     getChannelAllPlaylists
 )
 
-router.route('/getChannelVideos:channelId').get(
+router.route('/getChannelVideos/:channelId').get(
     verifyJwt,
     getChannelVideos
 )
 
-router.route("/getChannelProfile:channelId").get(
+router.route("/getChannelProfile/:channelId").get(
     verifyJwt,
     getUserChannelProfile
   );

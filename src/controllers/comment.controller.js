@@ -2,7 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/APiResponse.js";
 import { Video } from "../models/video.model.js";
-
+import { Comment } from "../models/comment.model.js";
+import mongoose from "mongoose";
 
 const getVideoComments = asyncHandler(async (req, res) => {
     const {videoId} = req.params;
@@ -15,9 +16,64 @@ const getVideoComments = asyncHandler(async (req, res) => {
         throw new ApiError(400, "video not found");
     }
 
-    const comments = await Comment.find({videoId});
-    if (!comments) {
-        throw new ApiError(400, "comments not found"); 
+    const comments = await Comment.aggregate([
+        {
+            $match:{
+                videoId: new mongoose.Types.ObjectId(videoId),
+            }
+        },
+        {
+            $lookup:{
+                from:"users",
+                localField:"userId",
+                foreignField:"_id",
+                as:"user",
+                pipeline:[
+                    {
+                        $addFields:{
+                            "userName": "$userName",
+                            "avatar": "$avatar",
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup:{
+                from:"likes",
+                localField:"_id",
+                foreignField:"comment",
+                as:"likes"
+            }
+        },
+        {
+            $project:{
+                _id:0,
+                content:1,
+                user:{
+                    userName:1,
+                    avatar:1,
+                },
+                totalLikes:{
+                    $size:"$likes",
+                },
+                isLiked:{
+                    $cond:{
+                        if:{
+                            $in:[req.user._id, "$likes.likedBy"]
+                        },
+                        then:true,
+                        else:false,
+                    }
+                },
+            }
+        }
+    ])
+
+    if (comments.length === 0) {
+        return res.status(200).json(
+            new ApiResponse(200, "No comments found for this video", {})
+        ) 
     }
     return res.status(200).json(
         new ApiResponse(200, "Comments fetched successfully",comments) 
@@ -55,24 +111,24 @@ const addComment = asyncHandler(async (req, res) => {
 
 const updateComment = asyncHandler(async (req, res) => {
     const {commentId} = req.params;
-    const {content} = req.body;
+    const {comment} = req.body;
     const userId = req.user?._id;
     
     if (!commentId) {
         throw new ApiError(400, "commentId is required"); 
     }
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
+    const commentExist = await Comment.findById(commentId);
+    if (!commentExist) {
         throw new ApiError(400, "comment not found");
     }
 
-    if (comment.userId.toString()!== userId.toString()) {
+    if (commentExist.userId.toString()!== userId.toString()) {
         throw new ApiError(400, "You are not authorized to edit this comment");
     }
 
     const updatedComment = await Comment.findByIdAndUpdate(commentId, {
-        content: content || comment.content,
+        content: comment || commentExist.content,
     }, {new: true})
 
     if (!updatedComment) {

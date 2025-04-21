@@ -103,8 +103,9 @@ const loginUser = asyncHandler( async(req,res) =>{
         throw new ApiError(403,"User does not exist");
     }
 
-    const isVaild = user.isPasswordValid(password);
 
+    const isVaild = await user.isPasswordValid(password);
+    
     if (!isVaild){
         throw new ApiError(403,"Username or password is invalid");
     }
@@ -199,7 +200,10 @@ const refreshAccessToken = asyncHandler( async(req,res) =>{
     if(!user){
         throw new ApiError(403, "Invalid access token");
     }
-    if(refreshAccessToken !==  user?.refreshToken){
+    console.log('Refresh token passed',userRefreshAccessToken);
+    console.log('This is user refresh token',user.refreshToken);
+
+    if(userRefreshAccessToken !=  user?.refreshToken){
         throw new ApiError(401,"Refresh access token is expired or used");
     }
 
@@ -213,7 +217,7 @@ const refreshAccessToken = asyncHandler( async(req,res) =>{
     return res
       .status(200)
       .cookie("accessToken",accessToken,options)
-      .cookies("refreshToken",refreshToken,options)
+      .cookie("refreshToken",refreshToken,options)
       .json(
         new ApiResponse(200,"Refresh token successfully updated",{})
       )
@@ -224,11 +228,19 @@ const changePassword = asyncHandler( async(req,res) =>{
     const {oldPassword, newPassword} = req.body;
     const user = await User.findById(req.user._id)
 
+    if(!oldPassword || !newPassword){
+        throw new ApiError(403,"Old password or new password is required");
+    }
+
     const isValid = await user.isPasswordValid(oldPassword);
+    if(!isValid){
+        throw new ApiError(401,"Old password is incorrect");
+    }
     user.password = newPassword;
     await user.save({
         validateBeforeSave:false
     })
+    console.log('This is user',user);
     return res.status(200)
       .json(
         new ApiResponse(200,"Successfully changed password",{})
@@ -246,15 +258,26 @@ const getCurrentUser = asyncHandler( async(req,res) =>{
 
 const changeUserName = asyncHandler( async(req,res) =>{
     const {username} = req.body;
-    const user = await User.findOne(username).select("-password -refreshToken");
+    const userId = req.user._id
+
+    if(!username){
+        throw new ApiError(403,"Username is required");
+    }
+    const user = await User.findById(userId);
+    user.userName = username;
+    await user.save({
+        validateBeforeSave:false
+    })
+
     return res.status(200)
     .json(
-      new ApiResponse(200,"Successfully changed user name",user)
+      new ApiResponse(200,"Successfully changed user name")
     )
 })
 
 const changeUserAvatar = asyncHandler( async(req,res) =>{
-    const {userAvatar} = req.file?.path;
+    console.log('This is req.file',req.file);
+    const userAvatar = req.file?.path;
     if (!userAvatar){
         throw new ApiError(403, "Invalid user avatar");
     }
@@ -281,7 +304,7 @@ const changeUserAvatar = asyncHandler( async(req,res) =>{
 })
 
 const changeUserCoverImage = asyncHandler( async(req,res) =>{
-    const {userImageCover} = req.file?.path;
+    const userImageCover = req.file?.path;
     if (!userImageCover){
         throw new ApiError(403, "Invalid user avatar");
     }
@@ -305,54 +328,72 @@ const changeUserCoverImage = asyncHandler( async(req,res) =>{
       )
 })
 
-
-
-const getUserWatchHistory = asyncHandler( async(req,res) =>{
-
+const getUserWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
         {
             $match: {
-                _id: new mongoose.Schema.Types.ObjectId(req.user._id)
+                _id: req.user._id
             }
         },
         {
             $lookup: {
-                from:"videos",
+                from: "videos",
                 localField: "watchHistory",
                 foreignField: "_id",
                 as: "watchHistory",
-                pipeline:[
+                pipeline: [
                     {
-                        $lookup:{
-                            from:"users",
+                        $lookup: {
+                            from: "users",
                             localField: "owner",
                             foreignField: "_id",
                             as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        _id: 0,
+                                        userName: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
                         }
-
                     },
                     {
-                        $addFields:{
-                            owner:"$owner"
+                        $addFields: {
+                            owner: { $first: "$owner" }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            videoFile: 1,
+                            thumbnail: 1,
+                            title: 1,
+                            description: 1,
+                            duration: 1,
+                            views: 1,
+                            createdAt: 1,
+                            owner: 1
                         }
                     }
                 ]
             }
         }
-    ])
+    ]);
 
     return res.status(200)
-      .json(
-        new ApiResponse(200,"Successfully fetched user watched history",user[0].watchHistory)
-      )
-
-
-})
+        .json(
+            new ApiResponse(
+                200,
+                "Successfully fetched user watched history",
+                user[0]?.watchHistory || []
+            )
+        )
+});
 
 const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
     
-    console.log('This is request userId',req.user._id);
-
     const user = await User.findById(req.user._id);
     
     // Generate 6 digit OTP
@@ -360,13 +401,8 @@ const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
     
     // Store OTP with 10 minutes expiry in redis
 
-    await redisClient.set('emailOtp:'+ user.email, otp, "EX", 600, (err, result) => {
-        if (err) {
-            throw new ApiError(500, "Failed to store OTP in Redis");
-        }
-    });
+    await redisClient.set('emailOtp:'+ user.email, otp,{ EX: 120 });
 
-    
     // Send email with OTP (you'll need to implement email sending logic)
     console.log('This is receiver email',user.email);
     
@@ -418,7 +454,6 @@ export {
     getCurrentUser,
     changeUserAvatar,
     changeUserCoverImage,
-    getUserChannelProfile,
     getUserWatchHistory,
     sendEmailVerificationOTP,
     verifyEmail,

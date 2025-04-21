@@ -4,6 +4,7 @@ import ApiResponse from "../utils/APiResponse.js";
 import { Video } from "../models/video.model.js";
 import { Playlist } from "../models/playlist.model.js";
 import uploadOnCloudinary  from "../utils/Cloudinary.js";
+import mongoose from "mongoose";
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const {name, description} = req.body;
@@ -37,8 +38,28 @@ const createPlaylist = asyncHandler(async (req, res) => {
     )
 })
 
+const deletePlaylist = asyncHandler(async (req, res) => {
+    const {playlistId} = req.params;
+    const userId = req.user._id;
+    if(!playlistId){
+        throw new ApiError(400, "PlaylistId is required");
+    } 
+    const playlist = await Playlist.findById(playlistId);
+
+    if(playlist.owner.toString()!== userId.toString()){
+        throw new ApiError(400, "You are not authorized to delete this playlist");
+    }
+
+    await Playlist.findByIdAndDelete(playlistId);
+
+    return res.status(200).json(
+        new ApiResponse(200, "Playlist deleted successfully")
+    )
+})
+
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params;
+    const {playlistId} = req.params;
+    const {videoId,position} = req.body;
     if(!playlistId || !videoId){
         throw new ApiError(400, "PlaylistId and videoId are required");
     }
@@ -53,13 +74,18 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     if(!video){
         throw new ApiError(400, "Video not found");
     }
-    playlist.videos.push(videoId);
+    playlist.videos.push({videoId, position: position || (playlist.videos?
+        playlist.videos.length:0) + 1});
     await playlist.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, "Video added to playlist successfully", playlist)
+    )
 })
 
 const uploadVideoToPlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params;
-    const {title, description} = req.body;
+    const {title,description,position,isPublished} = req.body;
 
     if(!playlistId){
         throw new ApiError(400, "PlaylistId is required");
@@ -92,14 +118,16 @@ const uploadVideoToPlaylist = asyncHandler(async (req, res) => {
         duration: videoCloudinary.duration,
         videoFile: videoCloudinary.url,
         thumbnail: thumbnailCloudinary.url,
-        owner: req.user._id
+        owner: req.user._id,
+        isPublished: isPublished || false,
     })
 
     if(!video){
         throw new ApiError(500, "Something went wrong while creating video"); 
     }
 
-    playlist.videos.push(video._id);
+    playlist.videos.push({videoId:video._id, position: position || playlist.videos?
+        playlist.videos.length:0 + 1});
     await playlist.save();
 
     return res.status(200).json(
@@ -108,7 +136,8 @@ const uploadVideoToPlaylist = asyncHandler(async (req, res) => {
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params;
+    const {playlistId} = req.params;
+    const {videoId} = req.body;
     if(!playlistId ||!videoId){
         throw new ApiError(400, "PlaylistId and videoId are required");
     }
@@ -123,19 +152,21 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     if(!video){
         throw new ApiError(400, "Video not found");
     }
-    playlist.videos.pull(videoId);
+    playlist.videos.pop(videoId);
     await playlist.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, "Video removed from playlist successfully", playlist)
+    )
 })
 
 const changePlaylistDetails = asyncHandler(async (req, res) => {
     const {playlistId} = req.params;
-    const thumbnailLocalPath = req.file.path;
+    const thumbnailLocalPath = req.file?.path;
+    const {name, description} = req.body;
 
     if(!playlistId){
         throw new ApiError(400, "PlaylistId is required");
-    }
-    if(!thumbnailLocalPath){
-        throw new ApiError(400, "Thumbnail is required");
     }
 
     const playlist = await Playlist.findById(playlistId);
@@ -146,18 +177,23 @@ const changePlaylistDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, "You are not authorized to change details of this playlist");
     }
 
-    const {name, description} = req.body;
-    if(!name || !description){
-        throw new ApiError(400, "Name and description are required");
+    if(thumbnailLocalPath){
+        const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+        playlist.thumbnail = thumbnail.url;
+        if(!thumbnail){
+            throw new ApiError(500, "Something went wrong while uploading thumbnail");
+        }
     }
 
-    const thumbnail = await cloudinary.uploader.upload(thumbnailLocalPath);
-    if(!thumbnail){
-        throw new ApiError(500, "Something went wrong while uploading thumbnail");
+    if(name){
+        playlist.name = name;
     }
-    playlist.name = name;
-    playlist.description = description;
-    playlist.thumbnail = thumbnail.url;
+    if(description){
+        playlist.description = description;
+    }
+    if(thumbnailLocalPath){
+        
+    }
 
     await playlist.save();
 
@@ -167,10 +203,220 @@ const changePlaylistDetails = asyncHandler(async (req, res) => {
 
 })
 
+const getALlVideosFromPlaylist = asyncHandler(async (req, res) => {
+   const {playlistId} = req.params;
+   if(!playlistId){
+    throw new ApiError(400, "PlaylistId is required");
+   }
+   const playlist = await Playlist.aggregate([
+    {
+        $match: {
+            _id: new mongoose.Types.ObjectId(playlistId)
+        }
+    },
+    {
+        $sort:{
+            "videos.position": 1
+        }
+    },
+    {
+        $lookup: {
+          from: 'videos',
+          localField: 'videos.videoId',
+          foreignField: '_id',
+          as: 'videos',
+          pipeline: [
+            {
+                $match: {
+                    isPublished: true 
+                }
+            },
+            {
+                $lookup: {
+                  from: 'users',
+                  localField: 'owner',
+                  foreignField: '_id',
+                  as: 'owner', 
+                  pipeline: [
+                    {
+                        $addFields: {
+                            userName: "$userName",
+                            avatar:"$avatar"
+                        }
+                    } 
+                  ]
+                },
+            } ,
+            {
+                $addFields:{
+                    videoId: "$_id", 
+                    videoTitle: "$title",
+                    videoThumbnail:"$thumbnail",
+                    duration: "$duration",
+                    views: "$views",
+                    videoFile: "$videoFile",
+                }
+            }
+          ]
+        }
+    },
+    {
+        $project: {
+            name: 1,
+            description: 1,
+            thumbnail: 1,
+            videos: 
+                {   
+                    videoId: 1,
+                    videoTitle: 1,
+                    videoThumbnail: 1,
+                    owner: {
+                        userName: 1,
+                        avatar: 1
+                    }
+                }
+        }
+    }
+   ]);
+
+   if(!playlist){
+    throw new ApiError(400, "Playlist not found"); 
+   }
+
+   return res.status(200).json(
+    new ApiResponse(200, "Playlist details fetched successfully", playlist)
+   )
+})
+
+const getAllUserPlaylist = asyncHandler(async (req, res) => {
+   const userId = req.user._id;
+   const playlists = await Playlist.aggregate([
+    {
+        $match: {
+            owner: new mongoose.Types.ObjectId(userId)
+        }
+    }, 
+    {
+        $addFields:{
+          totalVideos:{
+            $size: "$videos"
+          } 
+        }
+    },
+    {
+        $sort:{
+            createdAt: -1
+        }
+    },
+    {
+        $project:{
+            _id: 1,
+            name: 1,
+            description: 1,
+            thumbnail: 1,
+            totalVideos: 1,
+            createdAt: 1,
+            updatedAt: 1
+        }
+    }
+   ])
+   if(!playlists){
+    throw new ApiError(400, "Playlists not found");
+   }
+   return res.status(200).json(
+    new ApiResponse(200, "Playlists fetched successfully", playlists)
+   )
+})
+
+const getPlaylistById = asyncHandler(async (req, res) => {
+   const {playlistId} = req.params;
+   if(!playlistId){
+    throw new ApiError(400, "PlaylistId is required");
+   }
+
+   const playlist = await Playlist.aggregate([
+    {
+        $match: {
+            _id: new mongoose.Types.ObjectId(playlistId)
+        }
+    },
+    {
+        $lookup: {
+          from: 'videos',
+          localField: 'videos.videoId',
+          foreignField: '_id',
+          as: 'videos',
+          pipeline: [
+            {
+                $match: {
+                    isPublished: true 
+                }
+            },
+            {
+                $lookup: {
+                  from: 'users',
+                  localField: 'owner',
+                  foreignField: '_id',
+                  as: 'owner', 
+                  pipeline: [
+                    {
+                        $addFields: {
+                            userName: "$userName",
+                            avatar:"$avatar"
+                        }
+                    } 
+                  ]
+                },
+            } ,
+            {
+                $addFields:{
+                    videoId: "$_id", 
+                    videoTitle: "$title",
+                    videoThumbnail:"$thumbnail",
+                    duration: "$duration",
+                    views: "$views",
+                    videoFile: "$videoFile",
+                }
+            }
+          ]
+        }
+    },
+    {
+        $project: {
+            name: 1,
+            description: 1,
+            thumbnail: 1,
+            videos: 
+                {   
+                    videoId: 1,
+                    videoTitle: 1,
+                    videoThumbnail: 1,
+                    owner: {
+                        userName: 1,
+                        avatar: 1
+                    }
+                }
+        }
+    }
+   ]);
+
+   if(!playlist){
+    throw new ApiError(400, "Playlist not found"); 
+   }
+
+   return res.status(200).json(
+    new ApiResponse(200, "Playlist details fetched successfully", playlist)
+   )
+})
+
 export {
     createPlaylist,
+    deletePlaylist,
     addVideoToPlaylist,
     uploadVideoToPlaylist,
     removeVideoFromPlaylist,
-    changePlaylistDetails
+    changePlaylistDetails,
+    getALlVideosFromPlaylist,
+    getAllUserPlaylist,
+    getPlaylistById
 }

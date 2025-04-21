@@ -36,7 +36,7 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
   }
   catch (error){
     console.log(error);
-    throw new apiError(401, "Something went wrong");
+    throw new apiError(401, "Unauthorized access, Please login again");
   }
 })
 

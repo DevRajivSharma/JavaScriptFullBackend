@@ -4,6 +4,7 @@ import ApiResponse from "../utils/APiResponse.js";
 import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Like } from "../models/like.model.js";
+import mongoose from "mongoose";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {   
     const {videoId} = req.params;
@@ -189,10 +190,62 @@ const isCommentLiked = asyncHandler(async (req, res) => {
     )
 })
 
+const getVideoTotalLikes = asyncHandler(async (req, res) => {
+    const {videoId} = req.params;
+
+    if (!videoId) {
+        throw new ApiError(400, "videoId is required");
+    }
+
+    const video = await Video.findById(videoId); 
+    if (!video) {
+        throw new ApiError(400, "video not found"); 
+    }
+    if(video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(400, "You are not authorized to view this video");
+    }
+
+    const totalLikes = await Like.countDocuments({video: videoId});
+
+    if (!totalLikes) {
+        return res.status(200).json(
+            new ApiResponse(200, "No likes found", {totalLikes: 0})
+        )
+    }
+    return res.status(200).json(
+        new ApiResponse(200, "Total likes fetched successfully", {totalLikes})
+    )
+})
+
+const getCommentTotalLikes = asyncHandler(async (req, res) => {
+    const {commentId} = req.params;
+
+    if (!commentId) {
+        throw new ApiError(400, "commentId is required");
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      throw new ApiError(400, "comment not found");
+    }
+
+    const totalLikes = await Like.countDocuments({comment: commentId}); 
+    if (!totalLikes) {
+        return res.status(200).json(
+            new ApiResponse(200, "No likes found", {totalLikes: 0})
+        )
+    }
+    return res.status(200).json(
+        new ApiResponse(200, "Total likes fetched successfully", {totalLikes})
+    )
+})
+
 export {
     toggleVideoLike,
     toggleCommentLike,
     allLikedVideos,
     isVideoLiked,
-    isCommentLiked
+    isCommentLiked,
+    getVideoTotalLikes,
+    getCommentTotalLikes
 };
