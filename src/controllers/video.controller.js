@@ -171,8 +171,56 @@ const getVideo = asyncHandler(async (req, res) => {
     user.watchHistory.addToSet(videoId);
     await user.save();
 
+    const videobyId = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId),
+            },
+ 
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: { $size: "$subscribers" },
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [userId, "$subscribers.subscriber"] },
+                                    then: true,
+                                    else: false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            avatar: 1,
+                            subscribersCount: 1,
+                            isSubscribed: 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
     res.status(200).json(
-        new ApiResponse(200, "Video fetched successfully", video)
+        new ApiResponse(200, "Video fetched successfully", videobyId)
     )
 })
 
@@ -191,7 +239,7 @@ const getMyVideos = asyncHandler(async (req, res) => {
 
 const searchVideos = asyncHandler(async (req, res) => {
     const { query, sortBy = "views", page = 1, limit = 10 } = req.body;
-
+    const userId = req.user._id;
     if (!query) {
         throw new ApiError(400, "Search query is required")
     }
@@ -212,6 +260,45 @@ const searchVideos = asyncHandler(async (req, res) => {
                     },
                 ],
             },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: { $size: "$subscribers" },
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [userId, "$subscribers.subscriber"] },
+                                    then: true,
+                                    else: false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            avatar: 1,
+                            subscribersCount: 1,
+                            isSubscribed: 1,
+                        }
+                    }
+                ]
+            }
         }
     ]
 
@@ -310,6 +397,93 @@ const togglePublish = asyncHandler(async (req, res) => {
     )
 })
 
+const getAllVideos = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const videos = await Video.aggregate([
+        {
+            $match: {
+                isPublished: true,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: { $size: "$subscribers" },
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [userId, "$subscribers.subscriber"] },
+                                    then: true,
+                                    else: false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            avatar: 1,
+                            subscribersCount: 1,
+                            isSubscribed: 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    if (!videos) {
+        throw new ApiError(400, "Videos not found")
+    }
+
+    res.status(200).json(
+        new ApiResponse(200, "Videos fetched successfully", videos)
+    )
+})
+
+const addViews = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.user._id; 
+
+    if (!videoId) {
+        throw new ApiError(400, "VideoId is required")
+    }
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(400, "Video not found")
+    }
+    if( video.isPublished === false ){
+        throw new ApiError(400, "Video is not published")
+    }    
+    
+    video.views += 1;
+    await video.save();
+
+    const user = await User.findById(userId);
+
+    user.watchHistory.addToSet(videoId);
+    await user.save();
+
+    res.status(200).json(
+        new ApiResponse(200, "Views added successfully")
+    )
+
+})
 
 export {
     uploadVideo,
@@ -320,5 +494,7 @@ export {
     getVideoStats,
     getVideo,
     getMyVideos,
-    togglePublish
+    getAllVideos,
+    togglePublish,
+    addViews,
 }

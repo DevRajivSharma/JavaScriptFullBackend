@@ -31,7 +31,7 @@ const registerUser = asyncHandler( async(req,res) =>{
 
 
     const {username,fullName, email, password} = req.body;
-
+    console.log("Inside Register and request is : ",req);
     if ([username,fullName,email,password].some((val)=> val.trim() === "")){
         throw new ApiError(400,"All fields are required");
     }
@@ -329,10 +329,11 @@ const changeUserCoverImage = asyncHandler( async(req,res) =>{
 })
 
 const getUserWatchHistory = asyncHandler(async (req, res) => {
+    const userId = req.user?._id;
     const user = await User.aggregate([
         {
             $match: {
-                _id: req.user._id
+                _id: userId
             }
         },
         {
@@ -350,18 +351,35 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                             as: "owner",
                             pipeline: [
                                 {
+                                    $lookup: {
+                                        from: "subscriptions",
+                                        localField: "_id",
+                                        foreignField: "channel",
+                                        as: "subscribers"
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        subscribersCount: { $size: "$subscribers" },
+                                        isSubscribed: {
+                                            $cond: {
+                                                if: { $in: [userId, "$subscribers.subscriber"] },
+                                                then: true,
+                                                else: false
+                                            }
+                                        }
+                                    }
+                                },
+                                {
                                     $project: {
-                                        _id: 0,
+                                        _id: 1,
                                         userName: 1,
-                                        avatar: 1
+                                        avatar: 1,
+                                        subscribersCount: 1,
+                                        isSubscribed: 1,
                                     }
                                 }
                             ]
-                        }
-                    },
-                    {
-                        $addFields: {
-                            owner: { $first: "$owner" }
                         }
                     },
                     {
@@ -374,7 +392,7 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
                             duration: 1,
                             views: 1,
                             createdAt: 1,
-                            owner: 1
+                            owner:1
                         }
                     }
                 ]
@@ -391,6 +409,43 @@ const getUserWatchHistory = asyncHandler(async (req, res) => {
             )
         )
 });
+
+const clearALlWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    user.watchHistory = [];
+    await user.save({ validateBeforeSave: false });
+    return res.status(200)
+      .json(
+            new ApiResponse(
+                200,
+                "Successfully cleared user watch history"
+            )
+      )
+})
+
+const removeVideoFromWatchHistory = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    const videoIndex = user.watchHistory.indexOf(videoId);
+    if (videoIndex === -1) {
+        throw new ApiError(404, "Video not found in watch history");
+    }
+    user.watchHistory.splice(videoIndex, 1);
+    await user.save({ validateBeforeSave: false });
+    return res.status(200)
+       .json(
+            new ApiResponse(
+                200,
+                "Successfully removed video from watch history"
+            )
+        )
+})
 
 const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
     
@@ -457,4 +512,6 @@ export {
     getUserWatchHistory,
     sendEmailVerificationOTP,
     verifyEmail,
+    removeVideoFromWatchHistory,
+    clearALlWatchHistory
 };

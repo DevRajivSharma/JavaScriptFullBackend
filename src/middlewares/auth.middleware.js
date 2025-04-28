@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import apiError from "../utils/ApiError.js";
+import ApiError from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
@@ -13,7 +13,7 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
     console.log('token found',token);
 
     if (!token) {
-      throw new apiError(400, "Unauthorized access");
+      throw new ApiError(400, "Unauthorized access");
     }
 
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
@@ -36,7 +36,7 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
   }
   catch (error){
     console.log(error);
-    throw new apiError(401, "Unauthorized access, Please login again");
+    throw new ApiError(401, "Unauthorized access, Please login again");
   }
 })
 

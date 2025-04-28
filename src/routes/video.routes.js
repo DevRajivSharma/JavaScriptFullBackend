@@ -10,11 +10,18 @@ import {
     getVideo,
     getMyVideos,
     updateThumbnail,
-    togglePublish
+    getAllVideos,
+    togglePublish,
+    addViews
     } 
 from "../controllers/video.controller.js";
 
 const router = Router();
+
+router.route("/getAllVideos").get(
+    verifyJwt,
+    getAllVideos 
+)
 
 router.route("/uploadVieo").post(
     verifyJwt,
@@ -48,7 +55,7 @@ router.route("/deleteVideo/:videoId").delete(
     deleteVideo
 )
 
-router.route("/searchVideos").get(
+router.route("/searchVideos").post(
     verifyJwt,
     searchVideos 
 )
@@ -71,6 +78,11 @@ router.route("/getVideoStats/:videoId").get(
 router.route("/togglePublish/:videoId").patch(
     verifyJwt,
     togglePublish 
+)
+
+router.route("/addViews/:videoId").patch(
+    verifyJwt,
+    addViews 
 )
 
 export default router;

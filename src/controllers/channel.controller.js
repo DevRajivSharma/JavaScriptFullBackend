@@ -97,7 +97,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 _id: new mongoose.Types.ObjectId(channelId)
             }
         },
-        // Subscription data
         {
             $lookup: {
                 from: "subscriptions",
@@ -123,11 +122,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 as: "videos",
                 pipeline: [
                     {
-                        $match: {
-                            isPublished: true
-                        }
-                    },
-                    {
                         $project: {
                             title: 1,
                             videoFile: 1,
@@ -135,7 +129,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                             thumbnail: 1,
                             views: 1,
                             duration: 1,
-                            createdAt: 1
+                            createdAt: 1,
+                            isPublished: 1
                         }
                     }
                 ]
@@ -150,11 +145,19 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 as: "playlists",
                 pipeline: [
                     {
+                        $addFields: {
+                            totalContainVideos: {
+                                $size: "$videos"
+                            }
+                        }
+                    },
+                    {
                         $project: {
                             name: 1,
                             description: 1,
                             thumbnail: 1,
-                            createdAt: 1
+                            createdAt: 1,
+                            totalContainVideos:1
                         }
                     }
                 ]
@@ -162,6 +165,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
+                
                 totalSubscribers: {
                     $size: "$subscriber"
                 },

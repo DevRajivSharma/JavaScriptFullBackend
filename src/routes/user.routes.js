@@ -11,7 +11,9 @@ import {
   changeUserCoverImage,
   getUserWatchHistory,
   sendEmailVerificationOTP,
-  verifyEmail
+  verifyEmail,
+  removeVideoFromWatchHistory,
+  clearALlWatchHistory
 }
 
   from "../controllers/user.controller.js";
@@ -82,6 +84,16 @@ router.route("/changeUserCoverImage").post(
 router.route("/getUserWatchHistory").get(
   verifyJwt,
   getUserWatchHistory
+)
+
+router.route("/rmVideoWH/:videoId").delete(
+  verifyJwt,
+  removeVideoFromWatchHistory
+)
+
+router.route("/clearAllWH").delete(
+  verifyJwt,
+  clearALlWatchHistory
 )
 
 router.route
