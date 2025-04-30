@@ -5,6 +5,8 @@ import {
     uploadVideo,
     deleteVideo,
     updateVideo,
+    updateVideoTitle,
+    updateVideoDescription,
     getVideoStats,
     searchVideos,
     getVideo,
@@ -12,7 +14,9 @@ import {
     updateThumbnail,
     getAllVideos,
     togglePublish,
-    addViews
+    addViews,
+    getVideoForUpdate,
+    getRelatedVideos
     } 
 from "../controllers/video.controller.js";
 
@@ -44,6 +48,16 @@ router.route("/updateVideo/:videoId").patch(
     updateVideo
 )
 
+router.route("/updateTitle/:videoId").patch(
+   verifyJwt,
+   updateVideoTitle
+)
+
+router.route("/updateDescription/:videoId").patch(
+   verifyJwt,
+   updateVideoDescription
+)
+
 router.route("/updateThumbnail/:videoId").patch(
    verifyJwt,
    upload.single("thumbnail"),
@@ -65,6 +79,11 @@ router.route("/getVideo/:videoId").get(
     getVideo
 )
 
+router.route("/getVideoForUpdate/:videoId").get(
+    verifyJwt,
+    getVideoForUpdate
+)
+
 router.route("/getMyVideos").get(
     verifyJwt,
     getMyVideos 
@@ -83,6 +102,11 @@ router.route("/togglePublish/:videoId").patch(
 router.route("/addViews/:videoId").patch(
     verifyJwt,
     addViews 
+)
+
+router.route("/getRelatedVideos/:videoId").get(
+    verifyJwt,
+    getRelatedVideos
 )
 
 export default router;

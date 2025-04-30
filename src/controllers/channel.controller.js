@@ -122,6 +122,11 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 as: "videos",
                 pipeline: [
                     {
+                        $match:{
+                            isPublished: true
+                        }
+                    },
+                    {
                         $project: {
                             title: 1,
                             videoFile: 1,

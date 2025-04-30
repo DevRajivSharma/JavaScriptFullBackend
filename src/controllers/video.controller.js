@@ -147,6 +147,60 @@ const updateThumbnail = asyncHandler(async (req, res) => {
     )
 })
 
+const updateVideoTitle = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.user._id;
+    const { title } = req.body;
+
+    if (!videoId) {
+        throw new ApiError(400, "VideoId is required")
+    }
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(400, "Video not found")
+    }
+    if (video.owner.toString()!== userId.toString()) {
+        throw new ApiError(400, "You are not authorized to update this video")
+    }
+
+    const updatedVideo = await Video.findByIdAndUpdate(videoId, {
+        title,
+    })
+
+    updatedVideo.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, "Video updated successfully", updatedVideo)
+    )
+})
+
+const updateVideoDescription = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.user._id;
+    const { description } = req.body;
+    if (!videoId) {
+        throw new ApiError(400, "VideoId is required")
+    }
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(400, "Video not found")
+    }
+    if (video.owner.toString()!== userId.toString()) {
+        throw new ApiError(400, "You are not authorized to update this video")
+    }
+    const updatedVideo = await Video.findByIdAndUpdate(videoId, {
+        description,
+    })
+
+    updatedVideo.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, "Video updated successfully", updatedVideo)
+    )
+})
+
 const getVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const userId = req.user._id;
@@ -224,9 +278,41 @@ const getVideo = asyncHandler(async (req, res) => {
     )
 })
 
+
+const getVideoForUpdate = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.user._id;
+
+    if (!videoId) {
+        throw new ApiError(400, "VideoId is required")
+    }
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(400, "Video not found")
+    } 
+    
+    if (video.owner.toString()!== userId.toString()) {
+        throw new ApiError(400, "You are not authorized to update this video")
+    }
+
+    const videobyId = await Video.findById(videoId);
+
+    res.status(200).json(
+        new ApiResponse(200, "Video fetched successfully", videobyId)
+    )
+})
+
 const getMyVideos = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const videos = await Video.find({ owner: userId });
+    const videos = await Video.aggregate([
+        {
+            $match: {
+                owner: new mongoose.Types.ObjectId(userId),
+            },
+        },
+        
+    ]);
 
     if (!videos) {
         throw new ApiError(400, "Videos not found")
@@ -485,11 +571,77 @@ const addViews = asyncHandler(async (req, res) => {
 
 })
 
+const getRelatedVideos = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const video = await Video.findById(videoId);
+    const userId = req.user._id;
+
+    if (!video) {
+        throw new ApiError(400, "Video not found")
+    }
+    const title = video.title; 
+    if (!title) {
+        throw new ApiError(400, "Search title is required")
+    }
+
+    // Handle both single words and sentences
+    const searchTerms = title.split(' ').filter(term => term.length > 0);
+
+    const searchPipeline = [
+        {
+            $match: {
+                $and: [
+                    { isPublished: true },
+                    { _id: { $ne: new mongoose.Types.ObjectId(videoId) } },
+                    {
+                        $or: [
+                            { title: { $regex: new RegExp(searchTerms.join('|'), 'i') } },
+                            { description: { $regex: new RegExp(searchTerms.join('|'), 'i') } },
+                        ]
+                    },
+                ],
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            avatar: 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    const relatedVideos = await Video.aggregate(searchPipeline);
+
+    if (!relatedVideos.length) {
+        return res.status(200).json(
+            new ApiResponse(200, "No videos found", [])
+        )
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, "Videos fetched successfully", relatedVideos)
+    )
+
+})
+
 export {
     uploadVideo,
     deleteVideo,
     updateVideo,
     updateThumbnail,
+    updateVideoTitle,
+    updateVideoDescription,
     searchVideos,
     getVideoStats,
     getVideo,
@@ -497,4 +649,6 @@ export {
     getAllVideos,
     togglePublish,
     addViews,
+    getRelatedVideos,
+    getVideoForUpdate
 }
