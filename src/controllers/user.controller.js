@@ -6,10 +6,10 @@ import ApiResponse from "../utils/APiResponse.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import redisClient from "../utils/Redis.Config.js";
+import connectRedis from "../utils/Redis.Config.js";
 import sendEmail from "../utils/EmailSend.js";
 import OtpEmailTemp from "../../Templates/emailOtp.js"
-
+const redisClient = await connectRedis();
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
