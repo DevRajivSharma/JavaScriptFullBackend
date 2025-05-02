@@ -5,10 +5,12 @@ import cookieParser from 'cookie-parser';
 
 const app = express();
 
+const cors = require('cors');
 app.use(cors({
-    origin : process.env.CORS_ORIGIN,
-    credentials : true,
+  origin: 'https://merry-taiyaki-9be10d.netlify.app',
+  credentials: true // if you use cookies or authentication
 }));
+
 
 app.use(express.json({limit: "16kb"}));
 
