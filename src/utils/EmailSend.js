@@ -1,4 +1,4 @@
-import createMailTransporter from "./Email.config.js"
+import createMailTransporter from "./Email.Config.js"
 
 const sendEmail = async (options) => {
     const transporter = createMailTransporter();
