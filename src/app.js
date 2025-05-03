@@ -4,9 +4,9 @@ import cookieParser from 'cookie-parser';
 
 
 const app = express();
-
+console.log(process.env.CORS_ORIGIN);
 app.use(cors({
-    origin : 'https://rajiv-videotube.netlify.app',
+    origin : process.env.CORS_ORIGIN,
     credentials : true,
 }));
 
