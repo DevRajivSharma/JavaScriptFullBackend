@@ -9,7 +9,7 @@ const verifyJwt = asyncHandler(async (req,res,next) =>{
   try{
     const token = req.cookies?.accessToken
       || req.header("Authorization")?.replace("Bearer ", "");
-
+    console.log('cookies is',req.cookies)
     console.log('token found',token);
 
     if (!token) {
