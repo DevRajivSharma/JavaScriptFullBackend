@@ -6,8 +6,11 @@ import cookieParser from 'cookie-parser';
 const app = express();
 
 app.use(cors({
-  origin: 'https://rajiv-videotube.netlify.app',
-  credentials: true // if you use cookies or authentication
+    origin: [
+        'https://rajiv-videotube.netlify.app',
+        'http://localhost:5173'
+        ],
+        credentials: true 
 }));
 
 
