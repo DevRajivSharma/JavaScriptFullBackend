@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
-
+console.log('This is cors origin ',process.env.CORS_ORIGIN)
 const app = express();
 console.log(process.env.CORS_ORIGIN);
 app.use(cors({
