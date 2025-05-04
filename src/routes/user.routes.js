@@ -42,13 +42,11 @@ router.route("/logout").post(
   logoutUser
 )
 
-router.route("/send-otp").post(
-  verifyJwt,
+router.route("/sendOtp").post(
   sendEmailVerificationOTP
 )
 
-router.route("/verify-email").post(
-  verifyJwt,
+router.route("/verifyOtp").post(
   verifyEmail
 )
 

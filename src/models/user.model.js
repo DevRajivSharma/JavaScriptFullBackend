@@ -33,10 +33,6 @@ const userSchema = new Schema(
             type: String,
             required: [true, 'Password is required'],
         },
-        isEmailVerified:{
-            type: Boolean,
-            default: false,
-        },
         watchHistory:[
             {
             type: Schema.Types.ObjectId,
@@ -59,6 +55,9 @@ userSchema.pre('save',async function(next) {
 })
 
 userSchema.methods.isPasswordValid = async function(password) {
+    console.log("password",password);
+    console.log("this",this)
+    console.log("this.password",this.password);
     return await bcrypt.compare(password, this.password);
 }
 

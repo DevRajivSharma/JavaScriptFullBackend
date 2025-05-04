@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-
+import ApiError from './utils/ApiError.js';
 console.log('This is cors origin ',process.env.CORS_ORIGIN)
 const app = express();
 console.log(process.env.CORS_ORIGIN);
@@ -9,6 +9,7 @@ app.use(cors({
     origin : process.env.CORS_ORIGIN,
     credentials : true,
 }));
+
 
 
 app.use(express.json({limit: "16kb"}));
@@ -39,4 +40,25 @@ app.use("/api/v1/playlists", playlistRoutes);
 app.use("/api/v1/likes", likeRoutes);
 app.use("/api/v1/channels", channelRoutes);
 
+
+app.use((err, req, res, next) => {
+    if (err instanceof ApiError) {
+        res.status(err.statusCode).json(
+            {
+                statusCode: err.statusCode,
+                message: err.message,
+                errors: err.errors,
+                data: err.data,
+                stack: err.stack
+            }
+        );
+    } else {
+        res.status(500).json({
+            success: false,
+            message: "Internal Server  Error",
+            errors: [],
+            data: null
+        });
+    }
+});
 export { app }

@@ -28,14 +28,14 @@ const generateAccessAndRefreshToken = async (userId) => {
 }
 
 const registerUser = asyncHandler( async(req,res) =>{
+    const {username,fullName, email, password ,otp} = req.body;
+    console.log("Inside Register and request is : ",username,fullName, email, password ,otp);
 
-
-    const {username,fullName, email, password} = req.body;
-    console.log("Inside Register and request is : ",req);
-    if ([username,fullName,email,password].some((val)=> val.trim() === "")){
+    if ([username,fullName,email,password,otp].some((val)=> val.trim() === "")){
         throw new ApiError(400,"All fields are required");
     }
-
+    await verifyOtpSeverSide(email,otp)
+    console.log("Otp verified");
     const userExist = await User.findOne({
         $or:[
             {username},
@@ -60,15 +60,21 @@ const registerUser = asyncHandler( async(req,res) =>{
     if(!avatar){
         throw new ApiError(403,"Avatar file needed");
     }
-
-    const user = await User.create({
-        userName:username.toLowerCase(),
-        fullName,
-        email: email.toLowerCase(),
-        avatar:avatar.url,
-        coverImage:coverImage?.url || "",
-        password,
-    })
+    let user;
+    try {
+        user = await User.create({
+            userName:username.toLowerCase(),
+            fullName,
+            email: email.toLowerCase(),
+            avatar:avatar.url,
+            coverImage:coverImage?.url || "",
+            password,
+        })
+    }
+    catch (error) {
+        console.log("Error while creating user",error);
+        throw new ApiError(500,"Something went wrong while registering user");
+    }
 
     const userCreated = await User.findById(user._id).select(
       "-password -refreshToken"
@@ -95,20 +101,37 @@ const loginUser = asyncHandler( async(req,res) =>{
         throw new ApiError(400,"All fields are required");
     }
     // console.log(typeof username_email.trim().toLowerCase());
-    const user = await User.findOne({
+    let user;
+    try {
+        user = await User.findOne({
             userName:(username_email.toLowerCase())
-    })
-
+        })
+    }
+    catch (error) {
+        console.log("Error while finding user",error);
+        throw new ApiError(500,"Something went wrong while finding user");
+    }
+    
     if(!user){
         throw new ApiError(403,"User does not exist");
     }
-
-
-    const isVaild = await user.isPasswordValid(password);
+    
+    let isVaild;
+    try {
+        isVaild = await user.isPasswordValid(password);
+    }
+    catch (error) {
+        console.log("Error while validating password",error);
+        throw new ApiError(500,"Something went wrong while validating password");
+    }
+    
+    console.log('step 1');
     
     if (!isVaild){
-        throw new ApiError(403,"Username or password is invalid");
+        throw new ApiError(403,"Credentials are not correct");
     }
+
+    console.log('This is user',user);
 
     const {accessToken,refreshToken} = await generateAccessAndRefreshToken(user._id)
 
@@ -452,20 +475,30 @@ const removeVideoFromWatchHistory = asyncHandler(async (req, res) => {
 
 const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
     
-    const user = await User.findById(req.user._id);
+    const email = req.body.email;
     
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    // Check if user already exists
+    const userExist = await User.findOne({ email });
+    if (userExist) {
+        throw new ApiError(409, "User already exists");
+    }
+
     // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
     
     // Store OTP with 10 minutes expiry in redis
 
-    await redisClient.set('emailOtp:'+ user.email, otp,{ EX: 120 });
+    await redisClient.set('emailOtp:'+ email, otp,{ EX: 600 });
 
     // Send email with OTP (you'll need to implement email sending logic)
-    console.log('This is receiver email',user.email);
+    console.log('This is receiver email',email);
     
     await sendEmail({
-        to: user.email,
+        to: email,
         subject: "Email Verification OTP",
         text: `Your OTP for email verification is: ${otp}`,
         html: OtpEmailTemp.replace("{verificationCode}", otp),
@@ -477,22 +510,35 @@ const sendEmailVerificationOTP = asyncHandler(async (req, res) => {
         );
 });
 
-const verifyEmail = asyncHandler(async (req, res) => {
-
-    const {otp} = req.body;
-    console.log('This is otp',req.body);
-    const user = await User.findById(req.user._id);
-
-    // Check if OTP is valid
-    const storedOtp = await redisClient.get('emailOtp:'+ user.email);
-    console.log('This is stored otp',storedOtp);
+const verifyOtpSeverSide = async (email,otp) =>{
+    console.log('This is email',email);
     console.log('This is otp',otp);
+    if (!email || !otp) {
+        throw new ApiError(400, "Email and OTP are required");
+    }
+
+    const storedOtp = await redisClient.get('emailOtp:'+ email);
+
     if (otp != storedOtp) {
         throw new ApiError(400, "Invalid OTP");
     }
-    // Mark email as verified
-    user.isEmailVerified = true;
-    await user.save({ validateBeforeSave: false });
+    console.log('This is storedOtp',storedOtp);
+    return true;
+}
+
+const verifyEmail = asyncHandler(async (req, res) => {
+    
+    const {email,otp} = req.body;
+
+    if (!email || !otp) {
+        throw new ApiError(400, "Email and OTP are required");
+    }
+
+    const storedOtp = await redisClient.get('emailOtp:'+ email);
+
+    if (otp != storedOtp) {
+        throw new ApiError(400, "Invalid OTP");
+    }
 
     return res.status(200)
         .json(
