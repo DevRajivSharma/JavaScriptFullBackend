@@ -6,9 +6,9 @@ import { Subscription } from "../models/subscription.model.js";
 
 
 const subscribtionToggle = asyncHandler(async (req, res) => {
+  await new Promise(resolve => setTimeout(resolve, 2000));
   const { channelId } = req.params;
   const subscriberId = req.user?._id;
-
   if (!channelId || !subscriberId) {
     throw new ApiError(400, "channelId or subscriberId is required");
   }

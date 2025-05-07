@@ -234,6 +234,26 @@ const getVideo = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes",
+            }
+        },
+        {
+            $addFields: {
+                isLiked: {
+                    $cond: {
+                        if: { $in: [userId,{$ifNull:["$likes.likedBy",[]]} ] },
+                        then: true,
+                        else: false
+                    }
+                },
+                totalLikes: { $size: {$ifNull:["$likes",[]]} },
+            }
+        },
+        {
+            $lookup: {
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
@@ -249,10 +269,10 @@ const getVideo = asyncHandler(async (req, res) => {
                     },
                     {
                         $addFields: {
-                            subscribersCount: { $size: "$subscribers" },
+                            subscribersCount: { $size: {$ifNull:["$subscribers",[]]} },
                             isSubscribed: {
                                 $cond: {
-                                    if: { $in: [userId, "$subscribers.subscriber"] },
+                                    if: { $in: [userId, {$ifNull:["$subscribers.subscriber",[]]} ] },
                                     then: true,
                                     else: false
                                 }
@@ -272,7 +292,7 @@ const getVideo = asyncHandler(async (req, res) => {
             }
         }
     ])
-
+    console.log(videobyId);
     res.status(200).json(
         new ApiResponse(200, "Video fetched successfully", videobyId)
     )
@@ -485,52 +505,79 @@ const togglePublish = asyncHandler(async (req, res) => {
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const videos = await Video.aggregate([
-        {
-            $match: {
-                isPublished: true,
+    let videos ;
+    try {
+        videos = await Video.aggregate([
+            {
+                $match: {
+                    isPublished: true,
+                },
             },
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "subscriptions",
-                            localField: "_id",
-                            foreignField: "channel",
-                            as: "subscribers"
+            {
+                $lookup: {
+                    from: "likes",
+                    localField: "_id",
+                    foreignField: "video",
+                    as: "likes",
+                }
+            },
+            {
+                $addFields: {
+                    isLiked: {
+                        $cond: {
+                            if: { $in: [userId,{$ifNull:["$likes.likedBy",[]]} ] },
+                            then: true,
+                            else: false
                         }
                     },
-                    {
-                        $addFields: {
-                            subscribersCount: { $size: "$subscribers" },
-                            isSubscribed: {
-                                $cond: {
-                                    if: { $in: [userId, "$subscribers.subscriber"] },
-                                    then: true,
-                                    else: false
+                    totalLikes: { $size: {$ifNull:["$likes",[]]} },
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "subscriptions",
+                                localField: "_id",
+                                foreignField: "channel",
+                                as: "subscribers"
+                            }
+                        },
+                        {
+                            $addFields: {
+                                subscribersCount: { $size: {$ifNull:["$subscribers",[]]} },
+                                isSubscribed: {
+                                    $cond: {
+                                        if: { $in: [userId, {$ifNull:["$subscribers.subscriber",[]]} ] },
+                                        then: true,
+                                        else: false
+                                    }
                                 }
                             }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                userName: 1,
+                                avatar: 1,
+                                subscribersCount: 1,
+                                isSubscribed: 1,
+                            }
                         }
-                    },
-                    {
-                        $project: {
-                            _id: 1,
-                            userName: 1,
-                            avatar: 1,
-                            subscribersCount: 1,
-                            isSubscribed: 1,
-                        }
-                    }
-                ]
+                    ]
+                }
             }
-        }
-    ])
+        ])
+    }
+    catch (error) {
+        console.error(error);
+    }
+
 
     if (!videos) {
         throw new ApiError(400, "Videos not found")

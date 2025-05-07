@@ -116,16 +116,8 @@ const loginUser = asyncHandler( async(req,res) =>{
         throw new ApiError(403,"User does not exist");
     }
     
-    let isVaild;
-    try {
-        isVaild = await user.isPasswordValid(password);
-    }
-    catch (error) {
-        console.log("Error while validating password",error);
-        throw new ApiError(500,"Something went wrong while validating password");
-    }
+    const isVaild = await user.isPasswordValid(password);
     
-    console.log('step 1');
     
     if (!isVaild){
         throw new ApiError(403,"Credentials are not correct");
