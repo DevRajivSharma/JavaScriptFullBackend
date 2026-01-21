@@ -11,7 +11,8 @@ import {
     changePlaylistDetails,
     getALlVideosFromPlaylist,
     getAllUserPlaylist,
-    getPlaylistById
+    getPlaylistById,
+    toggleSavePlaylist,
 } from "../controllers/playlist.controller.js";
 
 const router = Router();
@@ -65,6 +66,11 @@ router.route("/getAllUserPlaylist").get(
 router.route("/getPlaylistById/:playlistId").get(
     verifyJwt,
     getPlaylistById 
+)
+
+router.route("/toggleSavePlaylist/:playlistId").patch(
+    verifyJwt,
+    toggleSavePlaylist
 )
 
 export default router;

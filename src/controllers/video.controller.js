@@ -5,7 +5,7 @@ import { Video } from "../models/video.model.js";
 import uploadOnCloudinary from "../utils/Cloudinary.js";
 import ApiResponse from "../utils/APiResponse.js";
 import mongoose from "mongoose";
-
+import { Subscription } from "../models/subscription.model.js";
 
 const uploadVideo = asyncHandler(async (req, res) => {
     const { title, description , isPublished} = req.body;
@@ -504,6 +504,7 @@ const togglePublish = asyncHandler(async (req, res) => {
 })
 
 const getAllVideos = asyncHandler(async (req, res) => {
+    const {page = 1, limit = 10} = req.query;
     const userId = req.user._id;
     let videos ;
     try {
@@ -571,8 +572,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
                         }
                     ]
                 }
-            }
-        ])
+            },
+        ]).skip((page - 1) * limit).limit(limit);
     }
     catch (error) {
         console.error(error);
@@ -682,6 +683,99 @@ const getRelatedVideos = asyncHandler(async (req, res) => {
 
 })
 
+const getLatestSubscribedVideos = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    console.log("Inside getLatestSubscribedVideos");
+    // Step 1: Get all channel IDs the user is subscribed to
+    const subscriptions = await Subscription.find({ subscriber: userId }).select("channel");
+    const channelIds = subscriptions.map(sub => sub.channel);
+    console.log("channelIds", channelIds);
+    if (!channelIds.length) {
+        console.log("No subscriptions found");
+        return res.status(200).json(
+            new ApiResponse(200, "No subscriptions found", [])
+        );
+    }
+
+    const Pipeline = [
+        {
+            $match: {
+                owner: { $in: channelIds },
+                isPublished: true,
+                createdAt: {
+                    $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+                },
+            },
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes",
+            }
+        },
+        {
+            $addFields: {
+                isLiked: {
+                    $cond: {
+                        if: { $in: [userId,{$ifNull:["$likes.likedBy",[]]} ] },
+                        then: true,
+                        else: false
+                    }
+                },
+                totalLikes: { $size: {$ifNull:["$likes",[]]} },
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: { $size: {$ifNull:["$subscribers",[]]} },
+                            isSubscribed: {
+                                $cond: {
+                                    if: { $in: [userId, {$ifNull:["$subscribers.subscriber",[]]} ] },
+                                    then: true,
+                                    else: false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            avatar: 1,
+                            subscribersCount: 1,
+                            isSubscribed: 1,
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    // Step 2: Get videos from those channels, sorted by latest
+    const videos = await Video.aggregate(Pipeline);
+
+    return res.status(200).json(
+        new ApiResponse(200, "Latest videos from subscribed channels", videos)
+    );
+});
+
 export {
     uploadVideo,
     deleteVideo,
@@ -697,5 +791,6 @@ export {
     togglePublish,
     addViews,
     getRelatedVideos,
-    getVideoForUpdate
+    getVideoForUpdate,
+    getLatestSubscribedVideos
 }

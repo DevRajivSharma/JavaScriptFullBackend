@@ -16,7 +16,8 @@ import {
     togglePublish,
     addViews,
     getVideoForUpdate,
-    getRelatedVideos
+    getRelatedVideos,
+    getLatestSubscribedVideos
     } 
 from "../controllers/video.controller.js";
 
@@ -107,6 +108,11 @@ router.route("/addViews/:videoId").patch(
 router.route("/getRelatedVideos/:videoId").get(
     verifyJwt,
     getRelatedVideos
+)
+
+router.route("/getLatestSubscribedVideos").get(
+    verifyJwt,
+    getLatestSubscribedVideos
 )
 
 export default router;

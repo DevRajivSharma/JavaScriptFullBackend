@@ -39,7 +39,13 @@ const userSchema = new Schema(
             ref: 'Video'
             }
         ],
-        refreshToken:{
+        playLists:[
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'PlayList',
+                default: [],
+            }
+        ],refreshToken:{
             type: String,
         },
     },
